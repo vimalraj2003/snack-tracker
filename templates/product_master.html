@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Product Master{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-0">Product Master</h4>
+    <small class="text-muted">{{ masters | length }} product(s) defined</small>
+  </div>
+  <a href="/product-master/add" class="btn btn-success">
+    <i class="bi bi-plus-lg me-1"></i>Add Product
+  </a>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    {% if masters %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>#</th>
+            <th>Product Name</th>
+            <th>Category</th>
+            <th>Default Unit</th>
+            <th>Description</th>
+            <th>Stock Entries</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in masters %}
+          <tr>
+            <td class="text-muted small">{{ m.id }}</td>
+            <td class="fw-semibold">{{ m.name }}</td>
+            <td><span class="badge bg-secondary">{{ m.category }}</span></td>
+            <td><span class="badge bg-light text-dark border">{{ m.default_unit }}</span></td>
+            <td class="text-muted small">{{ m.description or '—' }}</td>
+            <td>
+              {% if m.stock_count > 0 %}
+                <a href="/products?search={{ m.name }}" class="badge bg-success text-decoration-none">
+                  {{ m.stock_count }} entr{{ 'y' if m.stock_count == 1 else 'ies' }}
+                </a>
+              {% else %}
+                <span class="text-muted small">No stock</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="d-flex gap-1">
+                <a href="/products/add?master_id={{ m.id }}" class="btn btn-sm btn-success" title="Add stock for this product">
+                  <i class="bi bi-plus-lg"></i> Add Stock
+                </a>
+                <a href="/product-master/{{ m.id }}/edit" class="btn btn-sm btn-outline-primary" title="Edit">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                <form action="/product-master/{{ m.id }}/delete" method="post"
+                      onsubmit="return confirm('Delete {{ m.name }} from master list?')">
+                  <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-card-list display-4"></i>
+      <p class="mt-2">No products defined yet. <a href="/product-master/add">Add your first product</a>.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

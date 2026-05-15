@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}{{ action }} Product Master{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-6">
+
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="/product-master" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h4 class="fw-bold mb-0">{{ action }} Product</h4>
+        <small class="text-muted">{% if action == 'Edit' %}Update product definition{% else %}Define a new product for the master list{% endif %}</small>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <form method="post">
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Product Name <span class="text-danger">*</span></label>
+            <input type="text" name="name" class="form-control" required
+                   placeholder="e.g. Murukku, Kaju Katli, Mixture"
+                   value="{{ master.name if master else '' }}">
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
+              <select name="category" class="form-select" required>
+                <option value="">Select...</option>
+                {% for cat in ['Snack', 'Sweet', 'Bakery', 'Beverage', 'Other'] %}
+                <option value="{{ cat }}"
+                  {% if master and master.category == cat %}selected{% endif %}>
+                  {{ cat }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label fw-semibold">Default Unit <span class="text-danger">*</span></label>
+              <select name="default_unit" class="form-select" required>
+                {% for u in ['kg', 'g', 'pieces', 'boxes', 'packets', 'liters', 'ml', 'dozens'] %}
+                <option value="{{ u }}"
+                  {% if master and master.default_unit == u %}selected{% endif %}>
+                  {{ u }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Description</label>
+            <input type="text" name="description" class="form-control"
+                   placeholder="Any notes about this product..."
+                   value="{{ master.description if master and master.description else '' }}">
+          </div>
+
+          <div class="d-flex gap-2 justify-content-end border-top pt-3">
+            <a href="/product-master" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-success px-4">
+              <i class="bi bi-{{ 'check-lg' if action == 'Edit' else 'plus-lg' }} me-1"></i>
+              {{ action }} Product
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

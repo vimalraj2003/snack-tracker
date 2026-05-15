@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Movement History{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-0">Movement History</h4>
+    <small class="text-muted">{{ movements | length }} record(s) found &mdash; {{ total_moves }} total movements</small>
+  </div>
+  <a href="/movements/new" class="btn btn-success">
+    <i class="bi bi-arrow-left-right me-1"></i>Move Product
+  </a>
+</div>
+
+<!-- Filters -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-12 col-md-3">
+        <label class="form-label small fw-semibold">Search</label>
+        <input type="text" name="search" class="form-control form-control-sm"
+               placeholder="Product name, batch, staff..." value="{{ search }}">
+      </div>
+      <div class="col-12 col-md-3">
+        <label class="form-label small fw-semibold">Location (from or to)</label>
+        <select name="location" class="form-select form-select-sm">
+          <option value="">All Locations</option>
+          {% for loc in locations %}
+          <option value="{{ loc }}" {% if location == loc %}selected{% endif %}>{{ loc }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small fw-semibold">From Date</label>
+        <input type="date" name="from_date" class="form-control form-control-sm" value="{{ from_date }}">
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small fw-semibold">To Date</label>
+        <input type="date" name="to_date" class="form-control form-control-sm" value="{{ to_date }}">
+      </div>
+      <div class="col-12 col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-success btn-sm">
+          <i class="bi bi-search me-1"></i>Filter
+        </button>
+        <a href="/movements" class="btn btn-outline-secondary btn-sm">Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Movement Table -->
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    {% if movements %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>#</th>
+            <th>Product</th>
+            <th>Batch</th>
+            <th>From Location</th>
+            <th></th>
+            <th>To Location</th>
+            <th>Qty Moved</th>
+            <th>Move Date</th>
+            <th>Moved By</th>
+            <th>Reason</th>
+            <th>Expiry</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in movements %}
+          {% set status = m.expiry_date | expiry_status if m.expiry_date else 'unknown' %}
+          <tr>
+            <td class="text-muted small">{{ m.id }}</td>
+            <td class="fw-semibold">{{ m.product_name }}</td>
+            <td class="font-monospace small">{{ m.batch_number or '—' }}</td>
+            <td>
+              <span class="badge bg-light text-dark border">
+                <i class="bi bi-geo-alt-fill text-muted me-1"></i>{{ m.from_location }}
+              </span>
+            </td>
+            <td class="text-center text-success fw-bold">
+              <i class="bi bi-arrow-right"></i>
+            </td>
+            <td>
+              <span class="badge bg-success bg-opacity-10 text-success border border-success">
+                <i class="bi bi-geo-alt-fill me-1"></i>{{ m.to_location }}
+              </span>
+            </td>
+            <td class="fw-semibold">{{ m.quantity_moved }} <span class="text-muted small">{{ m.unit }}</span></td>
+            <td class="small">{{ m.moved_date | fmt_date }}</td>
+            <td>
+              {% if m.moved_by %}
+                <span class="badge bg-secondary bg-opacity-15 text-dark">
+                  <i class="bi bi-person me-1"></i>{{ m.moved_by }}
+                </span>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td class="small text-muted">{{ m.reason or '—' }}</td>
+            <td>
+              {% if m.expiry_date %}
+                {% set days = m.expiry_date | days_left %}
+                {% if status == 'expired' %}
+                  <span class="badge bg-danger">Expired</span>
+                {% elif status == 'critical' %}
+                  <span class="badge bg-warning text-dark">{{ days }}d left</span>
+                {% elif status == 'warning' %}
+                  <span class="badge bg-info text-dark">{{ days }}d left</span>
+                {% else %}
+                  <span class="badge bg-success">{{ days }}d left</span>
+                {% endif %}
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-arrow-left-right display-4"></i>
+      <p class="mt-2">No movements recorded yet.</p>
+      <a href="/movements/new" class="btn btn-outline-success btn-sm">Move a Product</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

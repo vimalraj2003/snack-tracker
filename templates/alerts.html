@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}Expiry Alerts{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-0">Expiry Alerts</h4>
+    <small class="text-muted">Products that need your attention</small>
+  </div>
+</div>
+
+{% macro product_table(products, badge_class, badge_label) %}
+{% if products %}
+<div class="table-responsive">
+  <table class="table table-hover mb-0 align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>Product</th>
+        <th>Category</th>
+        <th>Batch</th>
+        <th>Location</th>
+        <th>Mfg Date</th>
+        <th>Packing Date</th>
+        <th>Expiry Date</th>
+        <th>Quantity</th>
+        <th>Status</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in products %}
+      {% set days = p.expiry_date | days_left %}
+      <tr>
+        <td class="fw-semibold">{{ p.name }}</td>
+        <td><span class="badge bg-secondary">{{ p.category }}</span></td>
+        <td class="font-monospace small">{{ p.batch_number or '—' }}</td>
+        <td><i class="bi bi-geo-alt-fill text-muted me-1"></i>{{ p.location }}</td>
+        <td class="small">{{ p.mfg_date | fmt_date }}</td>
+        <td class="small">{{ p.packing_date | fmt_date }}</td>
+        <td class="small fw-semibold">{{ p.expiry_date | fmt_date }}</td>
+        <td>{{ p.quantity }} <span class="text-muted small">{{ p.unit }}</span></td>
+        <td><span class="badge {{ badge_class }}">{{ badge_label(days) }}</span></td>
+        <td>
+          <a href="/products/{{ p.id }}/edit" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-pencil"></i>
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="text-center py-4 text-muted">
+  <i class="bi bi-check-circle-fill text-success fs-3"></i>
+  <p class="mt-2 mb-0">None in this category. All good!</p>
+</div>
+{% endif %}
+{% endmacro %}
+
+<!-- Expired -->
+<div class="card border-0 shadow-sm mb-4 border-start border-danger border-4">
+  <div class="card-header bg-danger text-white fw-semibold border-0">
+    <i class="bi bi-x-circle-fill me-2"></i>Expired Products
+    <span class="badge bg-white text-danger ms-2">{{ expired | length }}</span>
+  </div>
+  <div class="card-body p-0">
+    {% if expired %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle table-danger">
+        <thead class="table-light">
+          <tr>
+            <th>Product</th><th>Category</th><th>Batch</th><th>Location</th>
+            <th>Mfg Date</th><th>Packing Date</th><th>Expiry Date</th><th>Qty</th><th>Days Overdue</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in expired %}
+          {% set days = p.expiry_date | days_left %}
+          <tr>
+            <td class="fw-semibold">{{ p.name }}</td>
+            <td><span class="badge bg-secondary">{{ p.category }}</span></td>
+            <td class="font-monospace small">{{ p.batch_number or '—' }}</td>
+            <td><i class="bi bi-geo-alt-fill text-muted me-1"></i>{{ p.location }}</td>
+            <td class="small">{{ p.mfg_date | fmt_date }}</td>
+            <td class="small">{{ p.packing_date | fmt_date }}</td>
+            <td class="small fw-semibold">{{ p.expiry_date | fmt_date }}</td>
+            <td>{{ p.quantity }} <span class="text-muted small">{{ p.unit }}</span></td>
+            <td><span class="badge bg-danger">{{ days | abs }} days ago</span></td>
+            <td><a href="/products/{{ p.id }}/edit" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-4 text-muted">
+      <i class="bi bi-check-circle-fill text-success fs-3"></i>
+      <p class="mt-2 mb-0">No expired products!</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Critical (7 days) -->
+<div class="card border-0 shadow-sm mb-4 border-start border-warning border-4">
+  <div class="card-header bg-warning text-dark fw-semibold border-0">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>Expiring Within 7 Days
+    <span class="badge bg-dark text-white ms-2">{{ critical | length }}</span>
+  </div>
+  <div class="card-body p-0">
+    {% if critical %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle table-warning">
+        <thead class="table-light">
+          <tr>
+            <th>Product</th><th>Category</th><th>Batch</th><th>Location</th>
+            <th>Mfg Date</th><th>Packing Date</th><th>Expiry Date</th><th>Qty</th><th>Days Left</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in critical %}
+          {% set days = p.expiry_date | days_left %}
+          <tr>
+            <td class="fw-semibold">{{ p.name }}</td>
+            <td><span class="badge bg-secondary">{{ p.category }}</span></td>
+            <td class="font-monospace small">{{ p.batch_number or '—' }}</td>
+            <td><i class="bi bi-geo-alt-fill text-muted me-1"></i>{{ p.location }}</td>
+            <td class="small">{{ p.mfg_date | fmt_date }}</td>
+            <td class="small">{{ p.packing_date | fmt_date }}</td>
+            <td class="small fw-semibold">{{ p.expiry_date | fmt_date }}</td>
+            <td>{{ p.quantity }} <span class="text-muted small">{{ p.unit }}</span></td>
+            <td><span class="badge bg-warning text-dark">{{ days }} days left</span></td>
+            <td><a href="/products/{{ p.id }}/edit" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-4 text-muted">
+      <i class="bi bi-check-circle-fill text-success fs-3"></i>
+      <p class="mt-2 mb-0">No products expiring within 7 days!</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Warning (30 days) -->
+<div class="card border-0 shadow-sm border-start border-info border-4">
+  <div class="card-header bg-info text-dark fw-semibold border-0">
+    <i class="bi bi-clock-fill me-2"></i>Expiring Within 30 Days
+    <span class="badge bg-dark text-white ms-2">{{ warning | length }}</span>
+  </div>
+  <div class="card-body p-0">
+    {% if warning %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Product</th><th>Category</th><th>Batch</th><th>Location</th>
+            <th>Mfg Date</th><th>Packing Date</th><th>Expiry Date</th><th>Qty</th><th>Days Left</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in warning %}
+          {% set days = p.expiry_date | days_left %}
+          <tr>
+            <td class="fw-semibold">{{ p.name }}</td>
+            <td><span class="badge bg-secondary">{{ p.category }}</span></td>
+            <td class="font-monospace small">{{ p.batch_number or '—' }}</td>
+            <td><i class="bi bi-geo-alt-fill text-muted me-1"></i>{{ p.location }}</td>
+            <td class="small">{{ p.mfg_date | fmt_date }}</td>
+            <td class="small">{{ p.packing_date | fmt_date }}</td>
+            <td class="small fw-semibold">{{ p.expiry_date | fmt_date }}</td>
+            <td>{{ p.quantity }} <span class="text-muted small">{{ p.unit }}</span></td>
+            <td><span class="badge bg-info text-dark">{{ days }} days left</span></td>
+            <td><a href="/products/{{ p.id }}/edit" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-4 text-muted">
+      <i class="bi bi-check-circle-fill text-success fs-3"></i>
+      <p class="mt-2 mb-0">No products expiring within 30 days!</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

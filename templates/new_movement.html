@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Move Product{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-6">
+
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="/movements" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h4 class="fw-bold mb-0">Move Product</h4>
+        <small class="text-muted">Record a location transfer</small>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <form method="post" id="moveForm">
+
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Select Product <span class="text-danger">*</span></label>
+            <select name="product_id" id="productSelect" class="form-select" required onchange="updateProductInfo(this)">
+              <option value="">— Choose a product —</option>
+              {% for p in products %}
+              <option value="{{ p.id }}"
+                data-location="{{ p.location }}"
+                data-quantity="{{ p.quantity }}"
+                data-unit="{{ p.unit }}">
+                {{ p.name }}{% if p.batch_number %} (Batch: {{ p.batch_number }}){% endif %} — {{ p.location }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Product info shown after selection -->
+          <div id="productInfo" class="d-none mb-4">
+            <div class="card border-start border-success border-4 bg-light">
+              <div class="card-body py-2 px-3 d-flex justify-content-between">
+                <div>
+                  <div class="text-muted small">Current Location</div>
+                  <div class="fw-semibold" id="infoLocation">—</div>
+                </div>
+                <div class="text-end">
+                  <div class="text-muted small">Available Stock</div>
+                  <div class="fw-semibold" id="infoStock">—</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="text-center mb-4" id="arrowIndicator" style="display:none!important">
+            <div class="d-inline-flex align-items-center gap-3 px-4 py-2 bg-light rounded-pill">
+              <span class="fw-semibold text-muted" id="arrowFrom">—</span>
+              <i class="bi bi-arrow-right fs-5 text-success"></i>
+              <span class="fw-semibold text-primary">New Location</span>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">New Location <span class="text-danger">*</span></label>
+            <input type="text" name="to_location" class="form-control" required
+                   placeholder="e.g. Warehouse B / Shelf C3 / Delhi Depot">
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-8">
+              <label class="form-label fw-semibold">Quantity Being Moved <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <input type="number" name="quantity_moved" id="qtyInput" class="form-control" required
+                       min="0.01" step="0.01" value="" placeholder="0">
+                <span class="input-group-text" id="unitLabel">units</span>
+              </div>
+              <div class="form-text" id="qtyHelp"></div>
+            </div>
+            <div class="col-4">
+              <label class="form-label fw-semibold">Move Date <span class="text-danger">*</span></label>
+              <input type="date" name="moved_date" class="form-control" required value="{{ today }}">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Moved By</label>
+            <input type="text" name="moved_by" class="form-control"
+                   placeholder="Staff name or your name">
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Reason / Notes</label>
+            <input type="text" name="reason" class="form-control"
+                   placeholder="e.g. Restocking, Transfer to shop, Dispatch to customer...">
+          </div>
+
+          <div class="d-flex gap-2 justify-content-end border-top pt-3">
+            <a href="/movements" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-success px-4">
+              <i class="bi bi-arrow-left-right me-1"></i>Confirm Move
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function updateProductInfo(sel) {
+  const opt = sel.options[sel.selectedIndex];
+  const info = document.getElementById('productInfo');
+  const arrow = document.getElementById('arrowIndicator');
+  if (!opt.value) {
+    info.classList.add('d-none');
+    arrow.style.setProperty('display', 'none', 'important');
+    return;
+  }
+  const loc = opt.dataset.location;
+  const qty = opt.dataset.quantity;
+  const unit = opt.dataset.unit;
+  document.getElementById('infoLocation').textContent = loc;
+  document.getElementById('infoStock').textContent = qty + ' ' + unit;
+  document.getElementById('arrowFrom').textContent = loc;
+  document.getElementById('qtyInput').max = qty;
+  document.getElementById('qtyInput').value = qty;
+  document.getElementById('unitLabel').textContent = unit;
+  document.getElementById('qtyHelp').textContent = 'Max available: ' + qty + ' ' + unit;
+  info.classList.remove('d-none');
+  arrow.style.removeProperty('display');
+}
+</script>
+{% endblock %}

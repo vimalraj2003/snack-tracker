@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Move Product{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-6">
+
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="/products" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h4 class="fw-bold mb-0">Move Product</h4>
+        <small class="text-muted">Record a location transfer</small>
+      </div>
+    </div>
+
+    <!-- Product summary -->
+    <div class="card border-0 shadow-sm mb-4 border-start border-success border-4">
+      <div class="card-body py-3">
+        <div class="row align-items-center">
+          <div class="col">
+            <div class="fw-bold fs-5">{{ product.name }}</div>
+            <div class="text-muted small">
+              <span class="badge bg-secondary me-1">{{ product.category }}</span>
+              {% if product.batch_number %}
+                Batch: <span class="font-monospace">{{ product.batch_number }}</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="col-auto text-end">
+            <div class="text-muted small">Current Location</div>
+            <div class="fw-semibold">
+              <i class="bi bi-geo-alt-fill text-success me-1"></i>{{ product.location }}
+            </div>
+          </div>
+          <div class="col-auto text-end">
+            <div class="text-muted small">Stock</div>
+            <div class="fw-semibold">{{ product.quantity }} {{ product.unit }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Move form -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <form method="post">
+
+          <div class="text-center mb-4">
+            <div class="d-inline-flex align-items-center gap-3 px-4 py-2 bg-light rounded-pill">
+              <span class="fw-semibold text-muted">
+                <i class="bi bi-geo-alt-fill text-success me-1"></i>{{ product.location }}
+              </span>
+              <i class="bi bi-arrow-right fs-5 text-success"></i>
+              <span class="fw-semibold text-primary">New Location</span>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">New Location <span class="text-danger">*</span></label>
+            <input type="text" name="to_location" class="form-control" required
+                   placeholder="e.g. Warehouse B / Shelf C3 / Delhi Depot">
+            <div class="form-text">Enter where this product is being moved to.</div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-8">
+              <label class="form-label fw-semibold">Quantity Being Moved <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <input type="number" name="quantity_moved" class="form-control" required
+                       min="0.01" step="0.01" max="{{ product.quantity }}"
+                       value="{{ product.quantity }}" placeholder="0">
+                <span class="input-group-text">{{ product.unit }}</span>
+              </div>
+              <div class="form-text">Max available: {{ product.quantity }} {{ product.unit }}</div>
+            </div>
+            <div class="col-4">
+              <label class="form-label fw-semibold">Move Date <span class="text-danger">*</span></label>
+              <input type="date" name="moved_date" class="form-control" required value="{{ today }}">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Moved By</label>
+            <input type="text" name="moved_by" class="form-control"
+                   placeholder="Staff name or your name">
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Reason / Notes</label>
+            <input type="text" name="reason" class="form-control"
+                   placeholder="e.g. Restocking, Transfer to shop, Dispatch to customer...">
+          </div>
+
+          <div class="d-flex gap-2 justify-content-end border-top pt-3">
+            <a href="/products" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-success px-4">
+              <i class="bi bi-arrow-left-right me-1"></i>Confirm Move
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
