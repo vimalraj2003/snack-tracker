@@ -226,9 +226,9 @@ def index():
 
     stock = db.execute('''
         SELECT
-            COALESCE(SUM(CASE WHEN p.is_split=0 AND p.status='active' THEN p.quantity + COALESCE(m.total_moved,0) ELSE 0 END), 0) AS total_stock,
-            COALESCE(SUM(CASE WHEN p.is_split=0 AND p.status='active' THEN COALESCE(m.total_moved,0) ELSE 0 END), 0)              AS moved_stock,
-            COALESCE(SUM(CASE WHEN p.is_split=0 AND p.status='active' THEN p.quantity ELSE 0 END), 0)                             AS current_stock
+            COALESCE(SUM(CASE WHEN p.status='active' THEN p.quantity ELSE 0 END), 0)                             AS total_stock,
+            COALESCE(SUM(CASE WHEN p.is_split=0 AND p.status='active' THEN COALESCE(m.total_moved,0) ELSE 0 END), 0) AS moved_stock,
+            COALESCE(SUM(CASE WHEN p.is_split=0 AND p.status='active' THEN p.quantity ELSE 0 END), 0)             AS current_stock
         FROM products p
         LEFT JOIN (
             SELECT product_id, SUM(quantity_moved) AS total_moved

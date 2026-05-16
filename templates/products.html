@@ -117,7 +117,7 @@
                 <div class="small text-muted"><i class="bi bi-arrow-return-right me-1"></i>Moved stock</div>
               {% else %}
                 <div class="small">
-                  <span class="text-muted">Total:</span> <strong>{{ (p.quantity + p.total_moved) | round(2) }}</strong> <span class="text-muted">{{ p.unit }}</span>
+                  <span class="text-muted">Total:</span> <strong>{{ p.quantity | round(2) }}</strong> <span class="text-muted">{{ p.unit }}</span>
                 </div>
                 {% if p.total_moved > 0 %}
                 <div class="small" style="color:#e67e22">
