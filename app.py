@@ -1,7 +1,12 @@
+import io
 import os
 import sqlite3
 from datetime import datetime, date, timedelta
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, session
+from functools import wraps
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'snacktrack-dev-secret-2024')
@@ -65,6 +70,13 @@ def init_db():
                 FOREIGN KEY (product_id) REFERENCES products(id)
             )
         ''')
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE,
+                password_hash TEXT NOT NULL
+            )
+        ''')
         conn.commit()
 
 
@@ -78,8 +90,84 @@ def migrate_db():
             conn.execute('ALTER TABLE products ADD COLUMN is_split INTEGER DEFAULT 0')
         if 'status' not in existing:
             conn.execute("ALTER TABLE products ADD COLUMN status TEXT DEFAULT 'active'")
+
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE,
+                password_hash TEXT NOT NULL
+            )
+        ''')
+
+        # Create default admin user if no users exist
+        count = conn.execute('SELECT COUNT(*) FROM users').fetchone()[0]
+        if count == 0:
+            default_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
+            conn.execute(
+                'INSERT INTO users (username, password_hash) VALUES (?, ?)',
+                ('admin', generate_password_hash(default_password))
+            )
         conn.commit()
 
+
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated
+
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if 'user_id' in session:
+        return redirect(url_for('index'))
+    error = None
+    if request.method == 'POST':
+        username = request.form['username'].strip()
+        password = request.form['password']
+        db = get_db()
+        user = db.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+        if user and check_password_hash(user['password_hash'], password):
+            session.permanent = True
+            session['user_id'] = user['id']
+            session['username'] = user['username']
+            return redirect(url_for('index'))
+        error = 'Invalid username or password.'
+    return render_template('login.html', error=error)
+
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
+
+@app.route('/change-password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    error = None
+    if request.method == 'POST':
+        current = request.form['current_password']
+        new_pw = request.form['new_password']
+        confirm = request.form['confirm_password']
+        db = get_db()
+        user = db.execute('SELECT * FROM users WHERE id = ?', (session['user_id'],)).fetchone()
+        if not check_password_hash(user['password_hash'], current):
+            error = 'Current password is incorrect.'
+        elif new_pw != confirm:
+            error = 'New passwords do not match.'
+        elif len(new_pw) < 6:
+            error = 'Password must be at least 6 characters.'
+        else:
+            db.execute('UPDATE users SET password_hash = ? WHERE id = ?',
+                       (generate_password_hash(new_pw), session['user_id']))
+            db.commit()
+            flash('Password changed successfully.', 'success')
+            return redirect(url_for('index'))
+    return render_template('change_password.html', error=error)
 
 
 @app.template_filter('days_left')
@@ -118,6 +206,7 @@ def fmt_date_filter(date_str):
 
 
 @app.route('/')
+@login_required
 def index():
     db = get_db()
     today = date.today()
@@ -167,6 +256,7 @@ def index():
 
 
 @app.route('/products')
+@login_required
 def products():
     db = get_db()
     today = date.today()
@@ -217,10 +307,12 @@ def products():
 
     query += ' ORDER BY p.expiry_date ASC'
     all_products = db.execute(query, params).fetchall()
+    original_count = sum(1 for p in all_products if not p['is_split'])
     locations = [r[0] for r in db.execute('SELECT DISTINCT location FROM products ORDER BY location').fetchall()]
 
     return render_template('products.html',
                            products=all_products,
+                           original_count=original_count,
                            search=search,
                            category=category,
                            location=location,
@@ -229,6 +321,7 @@ def products():
 
 
 @app.route('/product-master')
+@login_required
 def product_master():
     db = get_db()
     masters = db.execute('''
@@ -241,6 +334,7 @@ def product_master():
 
 
 @app.route('/product-master/add', methods=['GET', 'POST'])
+@login_required
 def add_master():
     if request.method == 'POST':
         db = get_db()
@@ -260,6 +354,7 @@ def add_master():
 
 
 @app.route('/product-master/<int:mid>/edit', methods=['GET', 'POST'])
+@login_required
 def edit_master(mid):
     db = get_db()
     master = db.execute('SELECT * FROM product_master WHERE id = ?', (mid,)).fetchone()
@@ -284,6 +379,7 @@ def edit_master(mid):
 
 
 @app.route('/product-master/<int:mid>/delete', methods=['POST'])
+@login_required
 def delete_master(mid):
     db = get_db()
     in_use = db.execute('SELECT COUNT(*) FROM products WHERE master_id = ?', (mid,)).fetchone()[0]
@@ -297,6 +393,7 @@ def delete_master(mid):
 
 
 @app.route('/products/add', methods=['GET', 'POST'])
+@login_required
 def add_product():
     db = get_db()
     if request.method == 'POST':
@@ -331,6 +428,7 @@ def add_product():
 
 
 @app.route('/products/<int:pid>/edit', methods=['GET', 'POST'])
+@login_required
 def edit_product(pid):
     db = get_db()
     product = db.execute('SELECT * FROM products WHERE id = ?', (pid,)).fetchone()
@@ -366,6 +464,7 @@ def edit_product(pid):
 
 
 @app.route('/products/<int:pid>/delete', methods=['POST'])
+@login_required
 def delete_product(pid):
     db = get_db()
     db.execute('DELETE FROM products WHERE id = ?', (pid,))
@@ -375,6 +474,7 @@ def delete_product(pid):
 
 
 @app.route('/products/<int:pid>/complete', methods=['POST'])
+@login_required
 def complete_product(pid):
     db = get_db()
     product = db.execute('SELECT * FROM products WHERE id = ?', (pid,)).fetchone()
@@ -390,7 +490,81 @@ def complete_product(pid):
     return redirect(url_for('products'))
 
 
+@app.route('/products/export')
+@login_required
+def export_products():
+    db = get_db()
+    products = db.execute('''
+        SELECT p.*, COALESCE(m.total_moved, 0) AS total_moved
+        FROM products p
+        LEFT JOIN (
+            SELECT product_id, SUM(quantity_moved) AS total_moved
+            FROM movements GROUP BY product_id
+        ) m ON p.id = m.product_id
+        WHERE p.status = 'active' AND p.is_split = 0
+        ORDER BY p.expiry_date ASC
+    ''').fetchall()
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'Products'
+
+    header_fill = PatternFill(start_color='1F7A4B', end_color='1F7A4B', fill_type='solid')
+    header_font = Font(color='FFFFFF', bold=True)
+
+    headers = ['#', 'Product Name', 'Category', 'Batch No.', 'Location',
+               'Mfg Date', 'Packing Date', 'Expiry Date',
+               'Total Stock', 'Moved', 'Current Stock', 'Unit', 'Status', 'Notes']
+    ws.append(headers)
+
+    for cell in ws[1]:
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal='center')
+
+    today = date.today()
+    for i, p in enumerate(products, 1):
+        days_left = (datetime.strptime(str(p['expiry_date']), '%Y-%m-%d').date() - today).days
+        if days_left < 0:
+            status = 'Expired'
+        elif days_left <= 7:
+            status = 'Critical'
+        elif days_left <= 30:
+            status = 'Warning'
+        else:
+            status = 'Safe'
+
+        ws.append([
+            i,
+            p['name'],
+            p['category'],
+            p['batch_number'] or '',
+            p['location'],
+            p['mfg_date'] or '',
+            p['packing_date'] or '',
+            p['expiry_date'],
+            round(p['quantity'] + p['total_moved'], 2),
+            round(p['total_moved'], 2),
+            round(p['quantity'], 2),
+            p['unit'],
+            status,
+            p['notes'] or '',
+        ])
+
+    for col in ws.columns:
+        max_len = max(len(str(cell.value or '')) for cell in col)
+        ws.column_dimensions[col[0].column_letter].width = max_len + 4
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    filename = f'products_{date.today().isoformat()}.xlsx'
+    return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                     as_attachment=True, download_name=filename)
+
+
 @app.route('/alerts')
+@login_required
 def alerts():
     db = get_db()
     today = date.today()
@@ -413,6 +587,7 @@ def alerts():
 
 
 @app.route('/products/<int:pid>/move', methods=['GET', 'POST'])
+@login_required
 def move_product(pid):
     db = get_db()
     product = db.execute('SELECT * FROM products WHERE id = ?', (pid,)).fetchone()
@@ -476,6 +651,7 @@ def move_product(pid):
 
 
 @app.route('/movements/new', methods=['GET', 'POST'])
+@login_required
 def new_movement():
     db = get_db()
     all_products = db.execute(
@@ -542,6 +718,7 @@ def new_movement():
 
 
 @app.route('/movements')
+@login_required
 def movements():
     db = get_db()
     search = request.args.get('search', '').strip()
